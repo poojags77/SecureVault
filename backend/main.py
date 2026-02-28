@@ -10,9 +10,8 @@ app = FastAPI()
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-# ---------------------------
+
 # Database Dependency
-# ---------------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -20,9 +19,7 @@ def get_db():
     finally:
         db.close()
 
-# ---------------------------
 # Password Strength Validation
-# ---------------------------
 def validate_password_strength(password: str):
     if len(password) < 8:
         return False
@@ -36,15 +33,11 @@ def validate_password_strength(password: str):
         return False
     return True
 
-# ---------------------------
 # Login Attempt Tracking
-# ---------------------------
 login_attempts = {}
 MAX_ATTEMPTS = 5
 
-# ---------------------------
 # Register Endpoint
-# ---------------------------
 @app.post("/register")
 def register(username: str, password: str, db: Session = Depends(get_db)):
 
@@ -72,9 +65,7 @@ def register(username: str, password: str, db: Session = Depends(get_db)):
 
     return {"message": "User registered successfully"}
 
-# ---------------------------
 # Login Endpoint
-# ---------------------------
 @app.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
 
