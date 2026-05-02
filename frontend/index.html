@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SecureVault</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SV</div>
+        <div>
+          <h1>SecureVault</h1>
+          <p>Hardened wallet console</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview">Overview</button>
+        <button class="nav-item" data-view="profile">Profile</button>
+        <button class="nav-item" data-view="wallet">Wallet</button>
+        <button class="nav-item" data-view="premium">Premium</button>
+        <button class="nav-item admin-only hidden" data-view="admin">Admin</button>
+      </nav>
+
+      <div class="session-card">
+        <span class="label">Session</span>
+        <strong id="sessionName">Guest</strong>
+        <span id="sessionMeta">Not authenticated</span>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section id="authPanel" class="auth-layout">
+        <div class="auth-copy">
+          <h2>Secure wallet management for authentication, payments, and admin review.</h2>
+          <p>A focused browser console for registration, protected sessions, encrypted local wallet actions, premium access, and role-based administration.</p>
+        </div>
+
+        <div class="auth-card">
+          <div class="tabs" role="tablist">
+            <button class="tab active" id="loginTab">Login</button>
+            <button class="tab" id="registerTab">Register</button>
+          </div>
+
+          <form id="loginForm" class="form">
+            <label>
+              Username
+              <input id="loginUsername" autocomplete="username" required>
+            </label>
+            <label>
+              Password
+              <input id="loginPassword" type="password" autocomplete="current-password" required>
+            </label>
+            <button class="primary-btn" type="submit">Login</button>
+          </form>
+
+          <form id="registerForm" class="form hidden">
+            <label>
+              Username
+              <input id="registerUsername" autocomplete="username" required>
+            </label>
+            <p class="password-rule">Password must be at least 8 characters and include uppercase, lowercase, number, and special character.</p>
+            <label>
+              Password
+              <input id="registerPassword" type="password" autocomplete="new-password" required>
+            </label>
+            <button class="primary-btn" type="submit">Create Account</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="appPanel" class="hidden">
+        <header class="topbar">
+          <div>
+            <h2 id="pageTitle">Overview</h2>
+          </div>
+          <div class="topbar-actions">
+            <div class="theme-switch" aria-label="Theme selector">
+              <button class="theme-option active" data-theme="light" type="button">Light</button>
+              <button class="theme-option" data-theme="dark" type="button">Dark</button>
+              <button class="theme-option" data-theme="blue" type="button">Blue</button>
+            </div>
+            <button id="logoutButton" class="ghost-btn">Logout</button>
+          </div>
+        </header>
+
+        <section id="overviewView" class="view active">
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span>Username</span>
+              <strong id="profileUsername">-</strong>
+            </article>
+            <article class="stat-card">
+              <span>Role</span>
+              <strong id="profileRole">-</strong>
+            </article>
+            <article class="stat-card">
+              <span>Subscription</span>
+              <strong id="profileSubscription">-</strong>
+            </article>
+          </div>
+
+          <div class="panel-grid">
+            <article class="panel">
+              <h3>Security Posture</h3>
+              <div class="check-list">
+                <span>Password hashing with bcrypt</span>
+                <span>JWT-protected API routes</span>
+                <span>Admin role enforcement</span>
+                <span>Private wallet material stays local</span>
+              </div>
+            </article>
+            <article class="panel">
+              <h3>Quick Actions</h3>
+              <div class="action-row">
+                <button class="secondary-btn" data-jump="wallet">Open Wallet</button>
+                <button class="secondary-btn" data-jump="premium">Upgrade Plan</button>
+                <button class="secondary-btn" data-jump="profile">Profile Settings</button>
+                <button class="secondary-btn admin-only hidden" data-jump="admin">Admin Console</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="profileView" class="view">
+          <div class="panel-grid">
+            <article class="panel">
+              <h3>Account Profile</h3>
+              <div class="summary-list">
+                <span>Username <strong id="profileSettingsUsername">-</strong></span>
+                <span>Role <strong id="profileSettingsRole">-</strong></span>
+                <span>Subscription <strong id="profileSettingsSubscription">-</strong></span>
+              </div>
+            </article>
+
+            <article class="panel">
+              <h3>Appearance</h3>
+              <p class="muted">Choose the workspace theme used by this browser.</p>
+              <div class="theme-grid">
+                <button class="theme-card" data-theme="light" type="button">
+                  <span class="swatch swatch-light"></span>
+                  Light
+                </button>
+                <button class="theme-card" data-theme="dark" type="button">
+                  <span class="swatch swatch-dark"></span>
+                  Dark
+                </button>
+                <button class="theme-card" data-theme="blue" type="button">
+                  <span class="swatch swatch-blue"></span>
+                  Blue
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <article class="panel wide-panel">
+            <h3>Change Password</h3>
+            <form id="changePasswordForm" class="change-password-grid">
+              <label>
+                Current Password
+                <input id="currentPassword" type="password" autocomplete="current-password" required>
+              </label>
+              <label>
+                New Password
+                <input id="newPassword" type="password" autocomplete="new-password" required>
+              </label>
+              <button class="primary-btn" type="submit">Update Password</button>
+            </form>
+            <p class="password-rule">New password must be at least 8 characters and include uppercase, lowercase, number, and special character.</p>
+          </article>
+        </section>
+
+        <section id="walletView" class="view">
+          <div class="panel-grid">
+            <article class="panel">
+              <h3>Local Encrypted Wallet</h3>
+              <p class="muted">This browser wallet stores encrypted key material locally. It never sends wallet secrets to the backend.</p>
+              <label>
+                Wallet Password
+                <input id="walletPassword" type="password" autocomplete="new-password">
+              </label>
+              <button id="createWalletButton" class="primary-btn">Create Local Wallet</button>
+            </article>
+
+            <article class="panel">
+              <h3>Wallet Address</h3>
+              <div class="address-box" id="walletAddress">No wallet created yet.</div>
+              <button id="copyAddressButton" class="secondary-btn">Copy Address</button>
+            </article>
+          </div>
+
+          <article class="panel wide-panel">
+            <h3>Sign Message</h3>
+            <div class="sign-grid">
+              <label>
+                Wallet Password
+                <input id="signPassword" type="password" autocomplete="current-password">
+              </label>
+              <label>
+                Message
+                <input id="messageToSign" placeholder="Enter message">
+              </label>
+              <button id="signButton" class="primary-btn">Sign</button>
+            </div>
+            <pre id="signatureOutput" class="output-box">Signature will appear here.</pre>
+          </article>
+        </section>
+
+        <section id="premiumView" class="view">
+          <article class="pricing-panel">
+            <div>
+              <span class="eyebrow">Premium Plan</span>
+              <h3>Advanced security access</h3>
+              <p>Unlock premium status for the final project demo and payment integration requirement.</p>
+            </div>
+            <div class="price-block">
+              <strong>$25</strong>
+              <span>one-time demo subscription</span>
+            </div>
+            <button id="subscribeButton" class="primary-btn">Pay with Razorpay</button>
+            <p id="paymentStatus" class="muted"></p>
+          </article>
+        </section>
+
+        <section id="adminView" class="view">
+          <div class="panel-grid">
+            <article class="panel">
+              <h3>Admin Summary</h3>
+              <div class="summary-list">
+                <span>Total Users <strong id="totalUsers">-</strong></span>
+                <span>Premium Users <strong id="premiumUsers">-</strong></span>
+                <span>Admin Users <strong id="adminUsers">-</strong></span>
+              </div>
+              <button id="refreshAdminButton" class="secondary-btn">Refresh</button>
+            </article>
+
+            <article class="panel">
+              <h3>User Actions</h3>
+              <label>
+                Username
+                <input id="adminUsername" placeholder="Enter username">
+              </label>
+              <div class="action-row">
+                <button class="secondary-btn" data-admin-action="/admin/make-admin">Make Admin</button>
+                <button class="secondary-btn" data-admin-action="/admin/make-premium">Make Premium</button>
+                <button class="danger-btn" data-admin-action="/admin/remove-premium">Remove Premium</button>
+              </div>
+            </article>
+          </div>
+
+          <article class="panel wide-panel">
+            <h3>Users</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Subscription</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
