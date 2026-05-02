@@ -1,0 +1,124 @@
+🧱 WHAT YOU WILL BUILD (Milestone 2)
+
+We’ll divide into 4 parts:
+
+🥇 PART 1 — Attack Simulation (MOST IMPORTANT)
+
+You MUST implement and demonstrate attacks.
+
+🔴 Attack 1 — Brute Force Login
+What to do:
+
+Create:
+
+attacks/bruteforce.py
+
+Simulate:
+
+Try multiple passwords against /login
+Show:
+Before → unlimited attempts
+After → blocked after 5 attempts
+What you demonstrate:
+
+✔ Weakness
+✔ Fix effectiveness
+
+🔴 Attack 2 — Clipboard Hijacking (Simulation)
+What to do:
+
+Create:
+
+attacks/clipboard_attack.py
+
+Simulate:
+
+User copies crypto address
+Malware replaces it with attacker address
+
+Example:
+
+copied = "USER_ADDRESS"
+malicious = "ATTACKER_ADDRESS"
+Show:
+User cannot detect easily
+Funds can be redirected
+🔴 Attack 3 — Phishing Simulation
+What to do:
+
+Create fake login:
+
+attacks/phishing_sim.py
+
+Simulate:
+
+Fake CLI login prompt
+Capture username/password
+Print "credentials stolen"
+🔴 Attack 4 — SQL Injection Attempt
+
+Test:
+
+username: ' OR 1=1 --
+
+Show:
+
+Your system is SAFE (thanks to ORM)
+🥈 PART 2 — Payment Integration (Commercial Requirement)
+
+You must add:
+
+💳 Subscription Feature
+
+CLI command:
+
+Subscribe to Premium
+
+Backend:
+
+Use:
+Stripe (recommended)
+OR Razorpay
+Flow:
+CLI → request subscription
+Backend → generates payment link
+User → pays via browser
+Backend → verifies via webhook
+CLI → shows "Premium Activated"
+Minimal Implementation (for marks)
+
+Even if not fully live, you must:
+
+Show payment API integration
+Show verification logic
+Document flow
+🥉 PART 3 — Admin Panel (Basic)
+
+You don’t need fancy UI.
+
+Just build simple:
+
+/admin route (FastAPI)
+
+Admin can:
+
+View users
+View login attempts
+View suspicious activity
+View subscriptions
+🧠 PART 4 — AI Security Feature
+
+Keep it simple (don’t overcomplicate).
+
+Example:
+CLI Command:
+phishing-scan <url>
+
+Backend:
+
+Check:
+suspicious keywords
+domain mismatch
+fake patterns
+
+OR use simple AI model (optional)

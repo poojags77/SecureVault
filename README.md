@@ -1,197 +1,104 @@
-# 🔐 SecureVault CLI – Milestone 2
+# SecureVault CLI
 
-SecureVault CLI is a security-focused cryptocurrency wallet application with a hardened authentication backend.  
-Milestone 2 focuses on secure key management, authentication security, and foundational threat modeling.
+SecureVault CLI is a hardened cryptocurrency wallet prototype with a FastAPI backend, local encrypted wallet storage, attack simulations, admin controls, and a subscription payment flow.
 
----
+## Final-Phase Features
 
-# 🚀 Features Implemented
-
-- Secure key generation (ECDSA secp256k1)
-- Encrypted private key storage (AES + PBKDF2)
+- ECDSA secp256k1 wallet key generation
+- Local encrypted private-key storage using Fernet encryption and PBKDF2
 - bcrypt password hashing
 - JWT authentication
 - Password strength validation
-- Login attempt lockout (brute-force protection)
-- STRIDE threat modeling
-- Secure environment configuration
+- Brute-force login lockout
+- Token-protected profile, payment, and admin API routes
+- Role-based admin dashboard
+- Razorpay payment order flow for premium subscription
+- Attack simulations for brute force, clipboard hijacking, phishing, and SQL injection attempts
+- Render deployment configuration
 
----
+## Project Structure
 
-# 🛠 Technologies Used
-
-- Python
-- FastAPI
-- SQLAlchemy
-- bcrypt
-- PyJWT
-- cryptography
-- SQLite
-- Requests
-
----
-
-# 📁 Project Structure
-
-```
+```text
 securevault/
-│
-├── backend/            # FastAPI authentication backend
-├── cli/                # CLI wallet application
-├── docs/               # Threat model & architecture docs
-├── requirements.txt
-└── .env
+|-- attacks/            # Attack simulation scripts
+|-- backend/            # FastAPI backend
+|-- cli/                # SecureVault command-line client
+|-- Docs/               # Project reports and final write-up draft
+|-- .env.example        # Environment variable template
+|-- render.yaml         # Render deployment blueprint
+|-- requirements.txt
 ```
 
-
----
-
-# ⚙️ How To Run The Project
-
-Follow these steps carefully.
-
----
-
-## 1️⃣ Clone Repository
-
-```bash
-git clone https://github.com/poojags77/SecureVault.git
-cd SecureVault
-```
-## 2️⃣ Create Virtual Environment
-
-### Windows
+## Local Setup
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
-```
-
-### Mac/Linux
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-You should see:
-
-```bash
-(venv)
-```
-
-## 3️⃣ Install Dependencies
-
-```bash
 pip install -r requirements.txt
+copy .env.example .env
 ```
 
----
+Edit `.env` and set a real `SECRET_KEY`. Razorpay keys are required for the live payment order flow.
 
-## 4️⃣ Create `.env` File
+## Run Backend
 
-Create a file named `.env` in the root directory and add:
-
-```env
-SECRET_KEY=your_super_secret_key_here
-JWT_EXPIRE_MINUTES=60
-DATABASE_URL=sqlite:///./securevault.db
-```
-## 5️⃣ Start Backend Server
+Run from the project root:
 
 ```bash
-cd backend
-uvicorn main:app --reload
+uvicorn backend.main:app --reload
 ```
 
-Backend will run at:
+API documentation:
 
-```bash
-http://127.0.0.1:8000
-```
-
-Swagger API documentation available at:
-
-```bash
+```text
 http://127.0.0.1:8000/docs
 ```
 
-Keep this terminal running.
+## Run CLI
 
-## 6️⃣ Run CLI Application
-
-Open a new terminal window.
+Open a second terminal from the project root:
 
 ```bash
-cd cli
-python main.py
+python cli/main.py
 ```
 
-You will see:
+Expected dashboard style after login:
 
 ```text
 === SecureVault CLI ===
-1. Register
-2. Login
-3. Exit
+User: test_user
+Role: ADMIN
+Subscription: PREMIUM
 ```
 
-## 🧪 Usage Flow
+## Attack Simulations
 
-1. Register (password must meet strength requirements)
-2. Login
-3. Create Wallet
-4. Sign Message
-5. Logout
+Run these from the project root while the backend is active:
 
----
+```bash
+python attacks/bruteforce.py
+python attacks/sql_injection.py
+python attacks/phishing_sim.py
+python attacks/clipboard_attack.py
+```
 
-## 📁 Files Generated During Execution
+## Deployment
 
-| File            | Purpose                                      |
-|-----------------|----------------------------------------------|
-| securevault.db | Stores user accounts (SQLite database)      |
-| wallet.dat     | Encrypted private key storage               |
+The included `render.yaml` can be used as a Render blueprint. The backend start command is:
 
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+```
 
-## 🔐 Security Design Highlights
-
-- Private keys never leave local machine
-- No plaintext password storage
-- bcrypt hashing with salt
-- JWT-based authentication
-- Brute-force protection via login lockout
-- Environment-based secret configuration
-
----
-
-## 🧠 Threat Modeling
-
-STRIDE threat model implemented in:
+After deployment, include the live API docs URL in the final report:
 
 ```text
-docs/threat_model.md
+https://your-app.onrender.com/docs
 ```
 
-## 🎯 Milestone 2 Scope
+## Security Notes
 
-This milestone establishes:
-
-- Secure wallet foundation
-- Secure authentication system
-- Abuse-case handling
-- Encrypted private key lifecycle
-- Foundational secure system design
-
-Future milestones will introduce:
-
-- Attack simulation
-- Payment integration
-- Admin dashboard
-- Deployment & domain setup
-
----
-
-## 📜 License
-
-Academic project – Cybersecurity coursework.
+- Private keys stay local and are never sent to the backend.
+- `.env`, SQLite databases, generated bytecode, wallet files, and stolen credential simulation output are ignored by git.
+- Admin routes require a valid JWT and an admin role.
+- SQLite is acceptable for the academic prototype; PostgreSQL is recommended for a production-style deployment.
