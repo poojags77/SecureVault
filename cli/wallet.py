@@ -1,10 +1,12 @@
 import getpass
 import hashlib
+from pathlib import Path
+
 from ecdsa import SigningKey, SECP256k1
 from crypto_utils import generate_private_key, generate_address
 from secure_storage import encrypt_private_key, decrypt_private_key
 
-WALLET_FILE = "wallet.dat"
+WALLET_FILE = Path(__file__).resolve().parent / "wallet.dat"
 
 def create_wallet():
     password = getpass.getpass("Set wallet password: ")
@@ -17,13 +19,17 @@ def create_wallet():
     with open(WALLET_FILE, "wb") as f:
         f.write(encrypted)
 
-    print("Wallet created successfully.")
+    print("✅ Wallet created successfully.")
     print("Address:", address)
 
 def sign_message(message):
     password = getpass.getpass("Enter wallet password: ")
 
     try:
+        if not WALLET_FILE.exists():
+            print("❌ Wallet not found. Please create a wallet first.")
+            return
+
         with open(WALLET_FILE, "rb") as f:
             encrypted = f.read()
 
@@ -33,7 +39,8 @@ def sign_message(message):
         message_hash = hashlib.sha256(message.encode()).digest()
         signature = sk.sign(message_hash)
 
+        print("✅ Message signed successfully.")
         print("Signature:", signature.hex())
 
     except Exception:
-        print("Invalid password or wallet corrupted.")
+        print("❌ Invalid wallet password or corrupted wallet file.")

@@ -1,13 +1,17 @@
 import getpass
+import time
+import webbrowser
+
 import requests
+
+from auth_client import API_URL, auth_headers, login, parse_response, register
 from wallet import create_wallet, sign_message
-from auth_client import register, login
 
-API_URL = "http://127.0.0.1:8000"
 
-# ---------------------------
-# AUTH MENU
-# ---------------------------
+def print_error(message):
+    print(f"❌ {message}")
+
+
 def auth_menu():
     while True:
         print("\n=== SecureVault CLI ===")
@@ -15,76 +19,81 @@ def auth_menu():
         print("2. Login")
         print("3. Exit")
 
-        choice = input("Select option: ")
+        choice = input("Select option: ").strip()
 
         if choice == "1":
-            username = input("Username: ")
+            username = input("Username: ").strip()
+            print("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.")
             password = getpass.getpass("Password: ")
             response = register(username, password)
-            print(response)
+
+            if "error" in response:
+                print_error(response["error"])
+            else:
+                print(f"✅ {response['message']}")
 
         elif choice == "2":
-            username = input("Username: ")
+            username = input("Username: ").strip()
             password = getpass.getpass("Password: ")
             response = login(username, password)
 
             if "access_token" in response:
-                print("Login successful.")
-                dashboard_menu(username)
+                print("✅ Login successful.")
+                dashboard_menu(response["access_token"])
             else:
-                print("Login failed:", response)
+                print_error(response.get("error", "Invalid credentials. Please try again."))
 
         elif choice == "3":
             print("Exiting SecureVault.")
             break
 
         else:
-            print("Invalid choice. Try again.")
+            print_error("Invalid option. Please choose 1, 2, or 3.")
 
 
-# ---------------------------
-# DASHBOARD
-# ---------------------------
-def dashboard_menu(username):
+def fetch_profile(token):
+    response = requests.get(
+        f"{API_URL}/profile",
+        headers=auth_headers(token),
+        timeout=10,
+    )
+    return parse_response(response)
+
+
+def dashboard_menu(token):
     while True:
-        # ✅ Safe profile fetch
-        res = requests.get(
-            f"{API_URL}/profile",
-            params={"username": username}
-        )
-
-        if res.status_code != 200:
-            print("⚠️ Failed to fetch profile:", res.text)
-            return
-
         try:
-            profile = res.json()
-        except:
-            print("⚠️ Invalid response from server:", res.text)
+            profile = fetch_profile(token)
+        except requests.RequestException as exc:
+            print_error(f"Unable to reach backend: {exc}")
             return
 
-        print("\n=== DASHBOARD ===")
-        print(f"User: {profile['username']}")
-        print(f"Subscription: {profile['subscription'].upper()}")
+        if "error" in profile:
+            print_error(profile["error"])
+            return
 
-        # 🌟 Premium indicator
-        if profile["subscription"] == "premium":
-            print("🌟 PREMIUM USER 🌟")
+        role = profile["role"].upper()
+        subscription = profile["subscription"].upper()
+        role_icon = "👨‍💼" if profile["role"] == "admin" else "👤"
+        subscription_icon = "🌟" if profile["subscription"] == "premium" else "🔒"
+
+        print("\n=== SecureVault CLI ===")
+        print(f"User: {profile['username']}")
+        print(f"Role: {role} {role_icon}")
+        print(f"Subscription: {subscription} {subscription_icon}")
 
         print("\n1. Create Wallet")
         print("2. Sign Message")
-        print("3. Logout")
-        print("4. Subscribe to Premium")
+        print("3. Subscribe to Premium")
+        print("4. Logout")
 
-        # 🔥 Premium feature
         if profile["subscription"] == "premium":
-            print("5. Premium Feature")
+            print("5. Premium Security Scan")
 
-        # 🔥 Admin feature
         if profile["role"] == "admin":
             print("6. Admin Panel")
 
-        choice = input("Select option: ")
+        choice = input("Select option: ").strip()
 
         if choice == "1":
             create_wallet()
@@ -94,126 +103,162 @@ def dashboard_menu(username):
             sign_message(message)
 
         elif choice == "3":
+            subscribe_flow(token)
+
+        elif choice == "4":
             print("Logged out.")
             break
 
-        elif choice == "4":
-            subscribe_flow(username)
-
         elif choice == "5" and profile["subscription"] == "premium":
-            print("\n🔥 Premium Feature Access Granted!")
+            print("\n✅ Premium Feature Access Granted.")
             print("Running advanced security scan...")
-            print("✔ No threats detected")
+            print("✅ No threats detected.")
 
         elif choice == "6" and profile["role"] == "admin":
-            admin_panel()
+            admin_panel(token)
 
         else:
-            print("Invalid choice. Try again.")
+            print_error("Invalid option for your current account permissions.")
 
 
-# ---------------------------
-# SUBSCRIPTION FLOW
-# ---------------------------
-def subscribe_flow(username):
-    import webbrowser
-    import time
-
-    res = requests.post(
-        f"{API_URL}/create-order",
-        params={"username": username}
-    )
-
-    if res.status_code != 200:
-        print("⚠️ Failed to create order:", res.text)
+def subscribe_flow(token):
+    try:
+        response = requests.post(
+            f"{API_URL}/create-order",
+            headers=auth_headers(token),
+            timeout=15,
+        )
+        data = parse_response(response)
+    except requests.RequestException as exc:
+        print_error(f"Unable to create payment order: {exc}")
         return
 
-    data = res.json()
+    if "error" in data:
+        print_error(data["error"])
+        return
+
     order_id = data["order_id"]
+    payment_url = f"{API_URL}{data['payment_url']}"
 
-    print("\n🧾 Order Created!")
+    print("\n✅ Payment order created.")
+    print(f"Order ID: {order_id}")
     print("Opening payment page...")
-
-    payment_url = f"http://127.0.0.1:8000/pay/{order_id}"
     webbrowser.open(payment_url)
 
     print("Waiting for payment confirmation...")
 
-    # Poll payment status
     while True:
-        status_res = requests.get(f"{API_URL}/payment-status/{order_id}")
-        status = status_res.json()["status"]
+        try:
+            status_res = requests.get(f"{API_URL}/payment-status/{order_id}", timeout=10)
+            status = status_res.json()["status"]
+        except (requests.RequestException, KeyError, ValueError) as exc:
+            print_error(f"Unable to check payment status: {exc}")
+            return
 
         if status == "success":
             verify = requests.post(
                 f"{API_URL}/verify-payment",
-                params={"username": username}
+                headers=auth_headers(token),
+                timeout=10,
             )
-            print("\n✅ Payment Successful! Premium Activated.")
+            verify_data = parse_response(verify)
+            if "error" in verify_data:
+                print_error(verify_data["error"])
+            else:
+                print("\n✅ Payment successful. Premium activated.")
             break
 
-        elif status == "failed":
-            print("\n❌ Payment Failed. Try Again.")
+        if status == "failed":
+            print_error("Payment failed. Please try again.")
             break
 
         time.sleep(3)
 
 
-# ---------------------------
-# ADMIN PANEL
-# ---------------------------
-def admin_panel():
+def admin_panel(token):
     while True:
-        print("\n=== 👨‍💼 ADMIN DASHBOARD ===")
+        print("\n=== ADMIN DASHBOARD ===")
         print("1. View Dashboard")
-        print("2. Make Admin")
-        print("3. Back")
+        print("2. Promote User to Admin")
+        print("3. Upgrade User to Premium")
+        print("4. Remove Premium")
+        print("5. Back")
 
-        choice = input("Select option: ")
+        choice = input("Select option: ").strip()
 
         if choice == "1":
-            res = requests.get(f"{API_URL}/admin/dashboard")
-
-            if res.status_code != 200:
-                print("⚠️ Failed to fetch data:", res.text)
-                continue
-
-            data = res.json()
-
-            # 🔥 SUMMARY
-            print("\n📊 SYSTEM SUMMARY")
-            print(f"Total Users: {data['summary']['total_users']}")
-            print(f"Premium Users: {data['summary']['premium_users']}")
-            print(f"Admin Users: {data['summary']['admin_users']}")
-
-            # 🔥 USER TABLE
-            print("\n👥 USER LIST")
-            print("-" * 40)
-            print(f"{'USERNAME':<15}{'ROLE':<10}{'SUBSCRIPTION'}")
-            print("-" * 40)
-
-            for user in data["users"]:
-                print(f"{user['username']:<15}{user['role']:<10}{user['subscription']}")
+            show_admin_dashboard(token)
 
         elif choice == "2":
-            username = input("Enter username to promote: ")
-
-            res = requests.post(
-                f"{API_URL}/admin/make-admin",
-                params={"username": username}
-            )
-
-            print(res.json())
+            update_user(token, "/admin/make-admin", "Enter username to promote: ")
 
         elif choice == "3":
+            update_user(token, "/admin/make-premium", "Enter username to upgrade: ")
+
+        elif choice == "4":
+            update_user(token, "/admin/remove-premium", "Enter username to downgrade: ")
+
+        elif choice == "5":
             break
 
         else:
-            print("Invalid choice")
+            print_error("Invalid option. Please choose a number from 1 to 5.")
 
 
-# ---------------------------
-# MAIN ENTRY
-# ---------------------------
+def show_admin_dashboard(token):
+    try:
+        response = requests.get(
+            f"{API_URL}/admin/dashboard",
+            headers=auth_headers(token),
+            timeout=10,
+        )
+        data = parse_response(response)
+    except requests.RequestException as exc:
+        print_error(f"Unable to fetch admin dashboard: {exc}")
+        return
+
+    if "error" in data:
+        print_error(data["error"])
+        return
+
+    print("\nSYSTEM SUMMARY")
+    print(f"Total Users: {data['summary']['total_users']}")
+    print(f"Premium Users: {data['summary']['premium_users']}")
+    print(f"Admin Users: {data['summary']['admin_users']}")
+
+    print("\nUSER LIST")
+    print("-" * 44)
+    print(f"{'USERNAME':<16}{'ROLE':<12}{'SUBSCRIPTION'}")
+    print("-" * 44)
+
+    for user in data["users"]:
+        print(f"{user['username']:<16}{user['role']:<12}{user['subscription']}")
+
+
+def update_user(token, endpoint, prompt):
+    username = input(prompt).strip()
+
+    if not username:
+        print_error("Username is required.")
+        return
+
+    try:
+        response = requests.post(
+            f"{API_URL}{endpoint}",
+            params={"username": username},
+            headers=auth_headers(token),
+            timeout=10,
+        )
+        data = parse_response(response)
+    except requests.RequestException as exc:
+        print_error(f"Unable to update user: {exc}")
+        return
+
+    if "error" in data:
+        print_error(data["error"])
+    else:
+        print(f"✅ {data['message']}")
+
+
 if __name__ == "__main__":
     auth_menu()
