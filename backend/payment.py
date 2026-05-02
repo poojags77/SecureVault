@@ -1,19 +1,21 @@
-import razorpay
 import os
+from pathlib import Path
+
+import razorpay
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import User
 
-load_dotenv("../.env")
+from backend.auth import get_current_username
+from backend.database import SessionLocal
+from backend.models import User
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 payment_status = {}
-router = APIRouter()
+router = APIRouter(tags=["Payment"])
 
-client = razorpay.Client(auth=(
-    os.getenv("RAZORPAY_KEY_ID"),
-    os.getenv("RAZORPAY_KEY_SECRET")
-))
 
 def get_db():
     db = SessionLocal()
@@ -22,39 +24,60 @@ def get_db():
     finally:
         db.close()
 
-# STEP 1: Create Razorpay Order
+
+def get_razorpay_client():
+    key_id = os.getenv("RAZORPAY_KEY_ID")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+
+    if not key_id or not key_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Payment gateway is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+        )
+
+    return razorpay.Client(auth=(key_id, key_secret))
+
+
 @router.post("/create-order")
-def create_order(username: str):
-    order = client.order.create({
-        "amount": 5000,  # $500 in cents
-        "currency": "USD",
-        "payment_capture": 1
-    })
+def create_order(
+    current_username: str = Depends(get_current_username),
+):
+    client = get_razorpay_client()
+    order = client.order.create(
+        {
+            "amount": 2500,
+            "currency": "USD",
+            "payment_capture": 1,
+            "notes": {"username": current_username, "product": "SecureVault Premium"},
+        }
+    )
 
     return {
         "order_id": order["id"],
-        "message": "Order created. Use this ID to pay."
+        "payment_url": f"/pay/{order['id']}",
+        "message": "Order created. Open the payment URL to continue.",
     }
 
-# STEP 2: Simulate Verification (Milestone 2)
+
 @router.post("/verify-payment")
-def verify_payment(username: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
+def verify_payment(
+    current_username: str = Depends(get_current_username),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == current_username).first()
 
-    if user:
-        user.subscription = "premium"
-        db.commit()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
 
-        return {"message": "Payment verified. Premium activated."}
+    user.subscription = "premium"
+    db.commit()
 
-    return {"error": "User not found"}
+    return {"message": "Payment verified. Premium activated."}
 
-from fastapi.responses import HTMLResponse
-import os
 
 @router.get("/pay/{order_id}", response_class=HTMLResponse)
 def pay(order_id: str):
-    key_id = os.getenv("RAZORPAY_KEY_ID")
+    key_id = os.getenv("RAZORPAY_KEY_ID", "")
 
     return f"""
     <html>
@@ -118,7 +141,7 @@ def pay(order_id: str):
         <div class="card">
             <div class="title">SecureVault Premium</div>
             <div class="desc">Unlock premium security features</div>
-            <div class="price">$50</div>
+            <div class="price">$25</div>
 
             <button class="btn" id="pay-btn">Pay with Razorpay</button>
         </div>
@@ -126,8 +149,8 @@ def pay(order_id: str):
         <script>
             var options = {{
                 "key": "{key_id}",
-                "amount": "50000",
-                "currency": "INR",
+                "amount": "2500",
+                "currency": "USD",
                 "name": "SecureVault",
                 "description": "Premium Subscription",
                 "order_id": "{order_id}",
@@ -154,6 +177,7 @@ def pay(order_id: str):
     </html>
     """
 
+
 @router.get("/payment-success/{order_id}")
 def payment_success(order_id: str):
     payment_status[order_id] = "success"
@@ -169,6 +193,7 @@ def payment_failed(order_id: str):
 @router.get("/payment-status/{order_id}")
 def get_payment_status(order_id: str):
     return {"status": payment_status.get(order_id, "pending")}
+
 
 @router.get("/payment-success-page", response_class=HTMLResponse)
 def payment_success_page():
@@ -199,17 +224,6 @@ def payment_success_page():
                 font-size: 26px;
                 font-weight: bold;
             }
-
-            .btn {
-                background: green;
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                font-size: 16px;
-                border-radius: 6px;
-                margin-top: 20px;
-                cursor: pointer;
-            }
         </style>
     </head>
 
@@ -222,6 +236,8 @@ def payment_success_page():
     </body>
     </html>
     """
+
+
 @router.get("/payment-failed-page", response_class=HTMLResponse)
 def payment_failed_page():
     return """
@@ -250,17 +266,6 @@ def payment_failed_page():
                 color: red;
                 font-size: 26px;
                 font-weight: bold;
-            }
-
-            .btn {
-                background: red;
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                font-size: 16px;
-                border-radius: 6px;
-                margin-top: 20px;
-                cursor: pointer;
             }
         </style>
     </head>
