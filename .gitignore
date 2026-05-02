@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+*.db
+cli/wallet.dat
+stolen_credentials.txt
+attacks/stolen_credentials.txt
+.venv/
+venv/
